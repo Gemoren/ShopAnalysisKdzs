@@ -31,7 +31,6 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -39,6 +38,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_jwt",
     "corsheaders",
+    "user.apps.UserConfig",
+    "role.apps.RoleConfig"
 ]
 
 MIDDLEWARE = [
