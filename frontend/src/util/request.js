@@ -2,12 +2,12 @@
 import axios from 'axios';
 
 
-let baseUrl="http://localhost:8000/";
+let baseUrl = "http://localhost:8000/";
 // 创建axios实例
 const httpService = axios.create({
     // url前缀-'http:xxx.xxx'
     // baseURL: process.env.BASE_API, // 需自定义
-    baseURL:baseUrl,
+    baseURL: baseUrl,
     // 请求超时时间
     timeout: 3000 // 需自定义
 });
@@ -16,7 +16,7 @@ const httpService = axios.create({
 // 添加请求拦截器
 httpService.interceptors.request.use(function (config) {
     // 在发送请求之前做些什么
-    config.headers.AUTHORIZATION=window.sessionStorage.getItem('token');
+    config.headers.AUTHORIZATION = window.sessionStorage.getItem('token');
     return config;
 }, function (error) {
     // 对请求错误做些什么
@@ -29,6 +29,12 @@ httpService.interceptors.response.use(function (response) {
     return response;
 }, function (error) {
     // 对响应错误做点什么
+    // 如果是401登录过期，则提示登录过期，跳转登录页面
+    if (error.response && error.response.status === 401) {
+        alert('登录已过期，请重新登录');
+        window.sessionStorage.removeItem('token');
+        window.location.href = '/login';
+    }
     return Promise.reject(error);
 });
 
@@ -107,7 +113,7 @@ export function fileUpload(url, params = {}) {
             url: url,
             method: 'post',
             data: params,
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: {'Content-Type': 'multipart/form-data'}
         }).then(response => {
             resolve(response);
         }).catch(error => {
@@ -116,7 +122,7 @@ export function fileUpload(url, params = {}) {
     });
 }
 
-export function getServerUrl(){
+export function getServerUrl() {
     return baseUrl;
 }
 

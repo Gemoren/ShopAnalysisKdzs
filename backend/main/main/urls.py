@@ -17,8 +17,17 @@ Including another URLconf
 
 from django.urls import path
 from django.urls import include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path("user/", include("user.urls")),  # 用户模块
     path("role/", include("role.urls")),  # 角色模块
+    path("shops/", include("shops.urls")),  # 商品模块
+    path("promotion/", include("promotion.urls")),  # 推广模块
+    path("data_stat/", include("data_stat.urls")),  # 数据统计模块
+    path("order/", include("order.urls")),  # 订单模块
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
