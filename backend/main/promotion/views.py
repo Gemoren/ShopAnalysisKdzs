@@ -181,13 +181,55 @@ def process_excel_file(task_id, file_path):
 
         ws = wb[target_sheet]
 
+        # 定义验证日期格式的函数
+        def is_valid_date(value):
+            if value is None:
+                return False
+            # 如果是 datetime 类型，直接返回 True
+            if isinstance(value, datetime):
+                return True
+            # 如果是字符串，尝试解析
+            if isinstance(value, str):
+                try:
+                    # 尝试常见的日期格式
+                    datetime.strptime(value, '%Y-%m-%d')
+                    return True
+                except ValueError:
+                    try:
+                        datetime.strptime(value, '%Y/%m/%d')
+                        return True
+                    except ValueError:
+                        try:
+                            datetime.strptime(value, '%Y年%m月%d日')
+                            return True
+                        except ValueError:
+                            return False
+            # 如果是数字类型，尝试转换为日期
+            try:
+                from datetime import timedelta
+                date = datetime(1899, 12, 30) + timedelta(days=int(value))
+                return True
+            except:
+                return False
+            return False
+
         # 从表头下一行开始处理数据
         processed_count = 0
+        skipped_count = 0
         for i, row in enumerate(ws.iter_rows(min_row=data_start_row, values_only=True), data_start_row):
-            # 跳过日期为 "总计" 的行
+            # 获取日期列的值（第一列）
             row_date = row[0] if row and len(row) > 0 else None
+
+            # 跳过日期为 "总计" 的行
             if row_date == '总计' or (isinstance(row_date, str) and '总计' in row_date):
                 print(f"跳过总计行: 第 {i} 行")
+                skipped_count += 1
+                continue
+
+            # 验证日期格式，如果不是有效日期则跳过
+            if not is_valid_date(row_date):
+                print(f"跳过无效日期行: 第 {i} 行, 日期值: {row_date}")
+                skipped_count += 1
                 continue
 
             data = {}
@@ -213,12 +255,19 @@ def process_excel_file(task_id, file_path):
                         # 处理百分号格式，如 "100.00%" -> 100.00
                         if value and isinstance(value, str) and '%' in value:
                             data[field_name] = float(value.replace('%', ''))
+                        elif isinstance(value, str) and value.strip() == '-':
+                            # 处理 "-" 这样的特殊字符，转换为 0
+                            data[field_name] = 0
                         else:
                             data[field_name] = float(value) if value else 0
                     elif field_name in ['net_transaction_count', 'transaction_count', 'direct_transaction_count',
                                         'indirect_transaction_count', 'exposure_count', 'click_count',
                                         'inquiry_count', 'favorite_count', 'follow_count']:
-                        data[field_name] = int(value) if value else 0
+                        if isinstance(value, str) and value.strip() == '-':
+                            # 处理 "-" 这样的特殊字符，转换为 0
+                            data[field_name] = 0
+                        else:
+                            data[field_name] = int(value) if value else 0
 
             # 检查是否有有效数据
             if data.get('date') and data.get('product_id'):
@@ -242,7 +291,7 @@ def process_excel_file(task_id, file_path):
         task.status = 'completed'
         task.save()
 
-        print(f"任务完成: {task_id}, 共处理 {processed_count} 条数据")
+        print(f"任务完成: {task_id}, 共处理 {processed_count} 条数据, 跳过 {skipped_count} 条无效数据")
 
     except Exception as e:
         print(f"任务失败: {task_id}, 错误: {str(e)}")
