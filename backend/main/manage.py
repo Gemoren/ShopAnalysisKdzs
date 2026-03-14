@@ -2,10 +2,14 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+import warnings
 
 
 def main():
     """Run administrative tasks."""
+    # 忽略整个项目中的 DateTimeField 时区警告
+    warnings.filterwarnings('ignore', message=r'DateTimeField .* received a naive datetime')
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'main.settings')
     try:
         from django.core.management import execute_from_command_line

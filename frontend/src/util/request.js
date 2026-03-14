@@ -25,6 +25,12 @@ httpService.interceptors.request.use(function (config) {
 
 // 添加响应拦截器
 httpService.interceptors.response.use(function (response) {
+    // 检查响应头中是否有新的 token（axios 会将响应头转换为小写）
+    const newToken = response.headers['authorization'];
+    if (newToken && newToken !== window.sessionStorage.getItem('token')) {
+        // console.log('Token已刷新，更新本地存储');
+        window.sessionStorage.setItem('token', newToken);
+    }
     // 对响应数据做点什么
     return response;
 }, function (error) {

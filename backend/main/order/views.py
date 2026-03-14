@@ -2,9 +2,12 @@ import os
 import threading
 import uuid
 from datetime import datetime
+from django.utils import timezone
 
 import openpyxl
 from django.conf import settings
+from django.db.models import Sum
+from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
 from django.shortcuts import render
 from .models import SysOrder
@@ -229,6 +232,61 @@ class GetOrders(View):
                     'page': page,
                     'page_size': page_size,
                     'total_pages': paginator.num_pages
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'code': 500, 'errorInfo': str(e)})
+
+
+# '下单时间'字段按年月、'店铺名称'聚合'实收金额'，仅要'订单状态'为'交易成功'的数据
+class GetOrdersByMonth(View):
+    def get(self, request):
+        try:
+            # 获取时间范围参数
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+
+            # 筛选订单状态为'交易成功'的数据
+            orders = SysOrder.objects.filter(order_status='交易成功')
+
+            # 根据时间范围过滤
+            if start_date:
+                try:
+                    start_datetime = datetime.strptime(start_date, '%Y-%m')
+                    # 转换为当前时区
+                    if timezone.is_naive(start_datetime):
+                        start_datetime = timezone.make_aware(start_datetime)
+                    orders = orders.filter(order_time__gte=start_datetime)
+                except ValueError:
+                    pass
+
+            if end_date:
+                try:
+                    # 结束日期要包含该月的所有时间，所以设置为下月的第一天减1秒
+                    end_datetime = datetime.strptime(end_date, '%Y-%m')
+                    # 转换为当前时区
+                    if timezone.is_naive(end_datetime):
+                        end_datetime = timezone.make_aware(end_datetime)
+                    # 计算下个月的第一天
+                    if end_datetime.month == 12:
+                        end_datetime = end_datetime.replace(year=end_datetime.year + 1, month=1)
+                    else:
+                        end_datetime = end_datetime.replace(month=end_datetime.month + 1)
+                    orders = orders.filter(order_time__lt=end_datetime)
+                except ValueError:
+                    pass
+
+            # 按年月和店铺名称分组，聚合实收金额
+            orders_by_month = orders.annotate(
+                month_year=TruncMonth('order_time')
+            ).values('month_year', 'store_name').annotate(
+                total_received=Sum('actual_received'))
+            # 按年月和店铺名称排序
+            orders_by_month = orders_by_month.order_by('month_year', 'store_name')
+            return JsonResponse({
+                'code': 200,
+                'data': {
+                    'list': list(orders_by_month),
                 }
             })
         except Exception as e:

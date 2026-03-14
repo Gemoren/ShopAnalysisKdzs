@@ -7,7 +7,7 @@ import openpyxl
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
-from .models import SysPromotion
+from .models import SysPromotion, PromotionSummaryMonthView
 from user.models import ImportTask
 from django.core.paginator import Paginator
 from django.views import View
@@ -200,24 +200,24 @@ def process_excel_file(task_id, file_path):
                             continue
                         data[field_name] = value
                     elif field_name in ['product_id', 'product_name', 'promotion_scene', 'promotion_name',
-                                       'bidding_method']:
+                                        'bidding_method']:
                         data[field_name] = str(value) if value else ''
                     elif field_name in ['total_cost', 'transaction_cost', 'transaction_amount',
-                                       'actual_roi', 'net_actual_roi', 'net_transaction_amount',
-                                       'cost_per_net_transaction', 'net_transaction_ratio',
-                                       'cost_per_transaction', 'amount_per_transaction',
-                                       'direct_transaction_amount', 'indirect_transaction_amount',
-                                       'direct_amount_per_transaction', 'indirect_amount_per_transaction',
-                                       'site_promotion_ratio', 'inquiry_cost', 'avg_inquiry_cost',
-                                       'favorite_cost', 'avg_favorite_cost', 'follow_cost', 'avg_follow_cost']:
+                                        'actual_roi', 'net_actual_roi', 'net_transaction_amount',
+                                        'cost_per_net_transaction', 'net_transaction_ratio',
+                                        'cost_per_transaction', 'amount_per_transaction',
+                                        'direct_transaction_amount', 'indirect_transaction_amount',
+                                        'direct_amount_per_transaction', 'indirect_amount_per_transaction',
+                                        'site_promotion_ratio', 'inquiry_cost', 'avg_inquiry_cost',
+                                        'favorite_cost', 'avg_favorite_cost', 'follow_cost', 'avg_follow_cost']:
                         # 处理百分号格式，如 "100.00%" -> 100.00
                         if value and isinstance(value, str) and '%' in value:
                             data[field_name] = float(value.replace('%', ''))
                         else:
                             data[field_name] = float(value) if value else 0
                     elif field_name in ['net_transaction_count', 'transaction_count', 'direct_transaction_count',
-                                       'indirect_transaction_count', 'exposure_count', 'click_count',
-                                       'inquiry_count', 'favorite_count', 'follow_count']:
+                                        'indirect_transaction_count', 'exposure_count', 'click_count',
+                                        'inquiry_count', 'favorite_count', 'follow_count']:
                         data[field_name] = int(value) if value else 0
 
             # 检查是否有有效数据
@@ -329,4 +329,47 @@ class GetPromotions(View):
                 }
             })
         except Exception as e:
+            return JsonResponse({'code': 500, 'errorInfo': str(e)})
+
+
+# 按年月和店铺聚合总花费(元)
+class GetPromotionsByMonth(View):
+    def get(self, request):
+        try:
+            # 获取时间范围参数
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+
+            # 从 PromotionSummaryMonthView 视图中获取数据，使用 values 避免访问不存在的 id 字段
+            promotions = PromotionSummaryMonthView.objects.all()
+
+            print(promotions)
+
+            # 按时间范围过滤
+            if start_date:
+                promotions = promotions.filter(month__gte=start_date)
+            if end_date:
+                promotions = promotions.filter(month__lte=end_date)
+
+            print(promotions)
+            # 使用 values() 获取字典形式的数据，避免 ORM 对象访问
+            promotions_data = promotions.values('store', 'month', 'total_cost')
+
+            # 转换为字典列表
+            promotions_list = []
+            for promotion in promotions_data:
+                promotions_list.append({
+                    'month_year': promotion['month'] + '-01',  # 转换为日期格式
+                    'store_name': promotion['store'] if promotion['store'] else '未分类',
+                    'total_cost_sum': float(promotion['total_cost']) if promotion['total_cost'] else 0,
+                })
+
+            return JsonResponse({
+                'code': 200,
+                'data': {
+                    'list': promotions_list
+                }
+            })
+        except Exception as e:
+            print(e)
             return JsonResponse({'code': 500, 'errorInfo': str(e)})

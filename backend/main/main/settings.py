@@ -11,10 +11,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -27,7 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -38,6 +37,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_jwt",
     "corsheaders",
+    'django_db_views',
     "user.apps.UserConfig",
     "role.apps.RoleConfig",
     "shops.apps.ShopsConfig",
@@ -84,7 +84,6 @@ CORS_ALLOW_METHODS = [
     "DELETE",
 ]
 
-
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
@@ -106,7 +105,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
@@ -117,4 +115,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 
-
+# JWT Token 配置
+JWT_AUTH = {
+    'JWT_EXPIRATION_DELTA': timedelta(hours=2),  # Token 过期时间为 2 小时
+}
