@@ -7,6 +7,7 @@ from django.utils import timezone
 import openpyxl
 from django.conf import settings
 from django.db.models import Sum
+from .models import OrderGrossMarginMonthView
 from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -287,6 +288,45 @@ class GetOrdersByMonth(View):
                 'code': 200,
                 'data': {
                     'list': list(orders_by_month),
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'code': 500, 'errorInfo': str(e)})
+
+
+# 按年月和店铺聚合月度毛利润
+class GetGrossMarginByMonth(View):
+    def get(self, request):
+        try:
+            # 获取时间范围参数
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+
+            # 从 OrderGrossMarginMonthView 视图中获取数据
+            gross_margins = OrderGrossMarginMonthView.objects.all()
+
+            # 按时间范围过滤
+            if start_date:
+                gross_margins = gross_margins.filter(month__gte=start_date)
+            if end_date:
+                gross_margins = gross_margins.filter(month__lte=end_date)
+
+            # 使用 values() 获取字典形式的数据，避免 ORM 对象访问
+            gross_margins_data = gross_margins.values('store_name', 'month', 'month_gross_margin')
+
+            # 转换为字典列表
+            gross_margins_list = []
+            for gross_margin in gross_margins_data:
+                gross_margins_list.append({
+                    'month_year': gross_margin['month'] + '-01',  # 转换为日期格式
+                    'store_name': gross_margin['store_name'],
+                    'month_gross_margin': float(gross_margin['month_gross_margin']) if gross_margin['month_gross_margin'] else 0,
+                })
+
+            return JsonResponse({
+                'code': 200,
+                'data': {
+                    'list': gross_margins_list
                 }
             })
         except Exception as e:

@@ -27,6 +27,20 @@
         </div>
       </el-col>
     </el-row>
+    <el-row class="row-bg" justify="space-evenly" style="margin-top: 20px;">
+      <el-col :span="12">
+        <div class="statistics-container" style="width: 100%;">
+          <h2>月度毛利润</h2>
+          <div ref="grossMarginChartRef" style="width: 100%; height: 40vh;"></div>
+        </div>
+      </el-col>
+      <el-col :span="12">
+        <div class="statistics-container" style="width: 100%;">
+          <h2>月度净利润</h2>
+          <div ref="netMarginChartRef" style="width: 100%; height: 40vh;"></div>
+        </div>
+      </el-col>
+    </el-row>
   </div>
 
 </template>
@@ -38,9 +52,13 @@ import {get} from '../util/request'
 
 const incomeChartRef = ref(null)
 const promotionChartRef = ref(null)
+const grossMarginChartRef = ref(null)
+const netMarginChartRef = ref(null)
 const dateRange = ref([])
 let incomeChartInstance = null
 let promotionChartInstance = null
+let grossMarginChartInstance = null
+let netMarginChartInstance = null
 
 // 计算最近六个月的日期范围
 const setDefaultDateRange = () => {
@@ -75,6 +93,18 @@ onMounted(() => {
     promotionChartInstance = echarts.init(promotionChartRef.value)
     fetchPromotionData(promotionChartInstance)
   }
+
+  // 初始化月度毛利润图表
+  if (grossMarginChartRef.value) {
+    grossMarginChartInstance = echarts.init(grossMarginChartRef.value)
+    fetchGrossMarginData(grossMarginChartInstance)
+  }
+
+  // 初始化月度净利润图表
+  if (netMarginChartRef.value) {
+    netMarginChartInstance = echarts.init(netMarginChartRef.value)
+    fetchNetMarginData(netMarginChartInstance)
+  }
 })
 
 // 处理日期变化
@@ -89,6 +119,12 @@ const handleQuery = () => {
   }
   if (promotionChartInstance) {
     fetchPromotionData(promotionChartInstance)
+  }
+  if (grossMarginChartInstance) {
+    fetchGrossMarginData(grossMarginChartInstance)
+  }
+  if (netMarginChartInstance) {
+    fetchNetMarginData(netMarginChartInstance)
   }
 }
 
@@ -283,6 +319,196 @@ const fetchPromotionData = async (chart) => {
     }
   } catch (error) {
     console.error('获取推广花费数据失败:', error)
+  }
+}
+
+// 获取月度毛利润数据
+const fetchGrossMarginData = async (chart) => {
+  try {
+    const params = {}
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.start_date = dateRange.value[0]
+      params.end_date = dateRange.value[1]
+    }
+
+    const response = await get('order/get_gross_margin_by_month', params)
+    if (response.data.code === 200) {
+      const dataList = response.data.data.list
+
+      // 处理数据：按月份和店铺名称分组
+      const monthMap = {}
+      const storeSet = new Set()
+
+      dataList.forEach(item => {
+        const monthYear = new Date(item.month_year)
+        const monthKey = `${monthYear.getFullYear()}-${String(monthYear.getMonth() + 1).padStart(2, '0')}`
+        const storeName = item.store_name
+        const monthGrossMargin = item.month_gross_margin
+
+        if (!monthMap[monthKey]) {
+          monthMap[monthKey] = {}
+        }
+        monthMap[monthKey][storeName] = monthGrossMargin
+        storeSet.add(storeName)
+      })
+
+      // 获取所有年月并排序
+      const months = Object.keys(monthMap).sort()
+      const monthLabels = months
+
+      // 获取所有店铺
+      const stores = Array.from(storeSet)
+
+      // 生成图表数据
+      const series = stores.map(store => ({
+        name: store,
+        type: 'line',
+        smooth: true,
+        data: months.map(month => monthMap[month][store] || 0)
+      }))
+
+      const option = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow'
+          }
+        },
+        legend: {
+          type: 'scroll',
+          data: stores,
+          top: 10,
+          itemWidth: 10,
+          itemHeight: 10,
+          textStyle: {
+            fontSize: 12
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: monthLabels,
+          axisLabel: {
+            interval: 0
+          }
+        },
+        yAxis: {
+          type: 'value',
+          name: '毛利润（元）'
+        },
+        series: series,
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          top: '80px',
+          containLabel: true
+        }
+      }
+
+      chart.setOption(option)
+
+      // 响应式调整
+      window.addEventListener('resize', () => {
+        chart.resize()
+      })
+    }
+  } catch (error) {
+    console.error('获取月度毛利润数据失败:', error)
+  }
+}
+
+// 获取月度净利润数据
+const fetchNetMarginData = async (chart) => {
+  try {
+    const params = {}
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.start_date = dateRange.value[0]
+      params.end_date = dateRange.value[1]
+    }
+
+    const response = await get('promotion/get_net_margin_by_month', params)
+    if (response.data.code === 200) {
+      const dataList = response.data.data.list
+
+      // 处理数据：按月份和店铺名称分组
+      const monthMap = {}
+      const storeSet = new Set()
+
+      dataList.forEach(item => {
+        const monthYear = new Date(item.month_year)
+        const monthKey = `${monthYear.getFullYear()}-${String(monthYear.getMonth() + 1).padStart(2, '0')}`
+        const storeName = item.store_name
+        const monthNetMargin = item.month_net_margin
+
+        if (!monthMap[monthKey]) {
+          monthMap[monthKey] = {}
+        }
+        monthMap[monthKey][storeName] = monthNetMargin
+        storeSet.add(storeName)
+      })
+
+      // 获取所有年月并排序
+      const months = Object.keys(monthMap).sort()
+      const monthLabels = months
+
+      // 获取所有店铺
+      const stores = Array.from(storeSet)
+
+      // 生成图表数据
+      const series = stores.map(store => ({
+        name: store,
+        type: 'line',
+        smooth: true,
+        data: months.map(month => monthMap[month][store] || 0)
+      }))
+
+      const option = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow'
+          }
+        },
+        legend: {
+          type: 'scroll',
+          data: stores,
+          top: 10,
+          itemWidth: 10,
+          itemHeight: 10,
+          textStyle: {
+            fontSize: 12
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: monthLabels,
+          axisLabel: {
+            interval: 0
+          }
+        },
+        yAxis: {
+          type: 'value',
+          name: '净利润（元）'
+        },
+        series: series,
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          top: '80px',
+          containLabel: true
+        }
+      }
+
+      chart.setOption(option)
+
+      // 响应式调整
+      window.addEventListener('resize', () => {
+        chart.resize()
+      })
+    }
+  } catch (error) {
+    console.error('获取月度净利润数据失败:', error)
   }
 }
 </script>

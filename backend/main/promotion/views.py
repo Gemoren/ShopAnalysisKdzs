@@ -7,7 +7,7 @@ import openpyxl
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
-from .models import SysPromotion, PromotionSummaryMonthView
+from .models import SysPromotion, PromotionSummaryMonthView, NetMarginMonthView
 from user.models import ImportTask
 from django.core.paginator import Paginator
 from django.views import View
@@ -421,4 +421,43 @@ class GetPromotionsByMonth(View):
             })
         except Exception as e:
             print(e)
+            return JsonResponse({'code': 500, 'errorInfo': str(e)})
+
+
+# 按年月和店铺聚合月度净利润
+class GetNetMarginByMonth(View):
+    def get(self, request):
+        try:
+            # 获取时间范围参数
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+
+            # 从 NetMarginMonthView 视图中获取数据
+            net_margins = NetMarginMonthView.objects.all()
+
+            # 按时间范围过滤
+            if start_date:
+                net_margins = net_margins.filter(month__gte=start_date)
+            if end_date:
+                net_margins = net_margins.filter(month__lte=end_date)
+
+            # 使用 values() 获取字典形式的数据，避免 ORM 对象访问
+            net_margins_data = net_margins.values('store_name', 'month', 'month_net_margin')
+
+            # 转换为字典列表
+            net_margins_list = []
+            for net_margin in net_margins_data:
+                net_margins_list.append({
+                    'month_year': net_margin['month'] + '-01',  # 转换为日期格式
+                    'store_name': net_margin['store_name'],
+                    'month_net_margin': float(net_margin['month_net_margin']) if net_margin['month_net_margin'] else 0,
+                })
+
+            return JsonResponse({
+                'code': 200,
+                'data': {
+                    'list': net_margins_list
+                }
+            })
+        except Exception as e:
             return JsonResponse({'code': 500, 'errorInfo': str(e)})

@@ -66,7 +66,7 @@ class SysPromotion(models.Model):
         ]
 
 
-# 推广数据汇总视图
+# 月度推广数据汇总视图
 class PromotionSummaryMonthView(DBView):
     id = models.IntegerField(db_column='id', primary_key=True)
     store = models.CharField(max_length=255, verbose_name="店铺名", blank=True, null=True)
@@ -97,3 +97,31 @@ class PromotionSummaryMonthView(DBView):
         db_table = "promotion_summary_month_view"
         managed = False
 
+
+# 月度净利润视图
+class NetMarginMonthView(DBView):
+    id = models.IntegerField(db_column='id', primary_key=True)
+    month = models.CharField(max_length=7, verbose_name="月份", blank=True, null=True)
+    store_name = models.CharField(max_length=255, verbose_name="店铺名称", blank=True, null=True)
+    month_net_margin = models.DecimalField(verbose_name="月度净利润", max_digits=10, decimal_places=2, blank=True, null=True)
+
+    view_definition = """
+        SELECT
+            ROW_NUMBER() OVER () AS id,
+            o.month,
+            o.store_name,
+            ROUND((o.month_gross_margin - p.total_cost), 2) AS month_net_margin
+        FROM
+            order_gross_margin_month_view o,
+            promotion_summary_month_view p
+        WHERE
+            o.store_name = p.store
+            AND o.month = p.month
+        ORDER BY
+            o.month DESC,
+            o.store_name DESC
+    """
+
+    class Meta:
+        db_table = "net_margin_month_view"
+        managed = False
