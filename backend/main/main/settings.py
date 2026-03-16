@@ -119,3 +119,13 @@ MEDIA_URL = '/media/'
 JWT_AUTH = {
     'JWT_EXPIRATION_DELTA': timedelta(hours=2),  # Token 过期时间为 2 小时
 }
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}

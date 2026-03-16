@@ -8,7 +8,7 @@ import traceback
 
 class JwtAuthenticationMiddleware(MiddlewareMixin):
     def process_request(self, request):
-        white_list = ["/user/login"]  # 请求白名单
+        white_list = ["/user/login", "/user/captcha"]  # 请求白名单
         path = request.path
         if path not in white_list and not path.startswith("/media"):
             # print("要进行token验证")

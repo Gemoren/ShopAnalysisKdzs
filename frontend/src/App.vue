@@ -7,7 +7,7 @@ import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
-const whitePath = ['/login', '/#/login']
+const whitePath = ['/login', '/#/login', '/user/captcha']
 
 // 路由守卫：检查 token
 watch(route, (to) => {

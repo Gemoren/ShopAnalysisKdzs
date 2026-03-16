@@ -4,3 +4,6 @@ djangorestframework-jwt == 1.11.0
 django-cors-headers == 4.9.0
 openpyxl == 3.1.5
 django-db-views == 0.1.14
+redis == 7.3.0
+django-redis == 6.0.0
+captcha == 0.7.1
