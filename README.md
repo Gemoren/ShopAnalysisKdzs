@@ -9,10 +9,13 @@
 ## 🛠️ 技术栈
 
 ### 后端
-- **框架**: Django
+- **框架**: Django + Django REST Framework (DRF)
 - **数据库**: SQLite
+- **缓存**: Redis
 - **数据视图**: django_db_views
-- **其他**: openpyxl (Excel处理)
+- **认证**: JWT Token
+- **验证码**: captcha
+- **数据处理**: openpyxl (Excel)
 
 ### 前端
 - **框架**: Vue 3
